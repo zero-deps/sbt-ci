@@ -193,7 +193,6 @@ object CiPlugin extends AutoPlugin {
     lazy val webappSrc     = TaskKey[File]("src")
     lazy val webappDest    = TaskKey[File]("dest")
     lazy val prepareWebapp = TaskKey[Seq[(sbt.File, String)]]("prepare")
-    lazy val postProcess   = TaskKey[java.io.File => Unit]("post-process")
     lazy val webInfClasses = TaskKey[Boolean]("web-inf-classes")
   }
 
@@ -214,16 +213,14 @@ object CiPlugin extends AutoPlugin {
       addArtifact(artifact in (Compile, packageWar), packageWar in Compile)
 
   lazy val prepareWebappTask: Def.Initialize[Task[Seq[(File, String)]]] =
-    (  postProcess in webapp
-      , packagedArtifact in (Compile, packageBin)
+    (  packagedArtifact in (Compile, packageBin)
       , mappings in (Compile, packageBin)
       , webInfClasses in webapp
       , webappSrc in webapp
       , webappDest in webapp
       , fullClasspath in Runtime
       ) map {
-      case (  postProcess
-      , (art, file)
+      case (  (art, file)
       , mappings
       , webInfClasses
       , webappSrc
@@ -250,25 +247,6 @@ object CiPlugin extends AutoPlugin {
           IO.copyFile(file, webappLibDir / file.getName)
         }
 
-        // create .jar files for depended-on projects in WEB-INF/lib
-        /*for {
-          cpItem    <- fullClasspath.toList
-          dir        = cpItem.data
-          if dir.isDirectory
-          artEntry  <- cpItem.metadata.entries find { e => e.key.label == "artifact" }
-          cpArt      = artEntry.value.asInstanceOf[Artifact]
-          if cpArt != art//(cpItem.metadata.entries exists { _.value == art })
-          files      = (dir ** "*").getPaths flatMap { p =>
-            val file = new File(p)
-            if (!file.isDirectory)
-              IO.relativize(dir, file) map { p => (file, p) }
-            else
-              None
-          }
-          jarFile    = cpArt.name + ".jar"
-          _          = IO.jar(files, webappLibDir / jarFile, new Manifest)
-        } yield ()*/
-
         // copy this project's library dependency .jar files to WEB-INF/lib
         for {
           cpItem <- fullClasspath.toList
@@ -278,8 +256,6 @@ object CiPlugin extends AutoPlugin {
           if name.endsWith(".jar")
         } yield IO.copyFile(file, webappLibDir / name)
 
-        postProcess(webappDest)
-
         (webappDest ** "*") pair (relativeTo(webappDest) | flat)
     }
 
@@ -288,7 +264,6 @@ object CiPlugin extends AutoPlugin {
       webappSrc      <<= (sourceDirectory in Compile) map { _ / "webapp" }
       , webappDest     <<= (target in Compile) map { _ / "webapp" }
       , prepareWebapp  <<= prepareWebappTask
-      , postProcess     := { _ => () }
       , webInfClasses   := false
       , watchSources <++= (webappSrc in webapp) map { d => (d ** "*").get }
     )
