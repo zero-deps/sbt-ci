@@ -3,37 +3,13 @@ package synrc.ci
 import java.io.File
 import java.lang.{Runtime => JRuntime}
 import java.util.concurrent.atomic.AtomicReference
-import java.util.jar.Manifest
 
 import sbt.Keys._
 import sbt._
 
-import scala.Console._
 import scala.annotation.tailrec
 
 object CiPlugin extends AutoPlugin {
-
-  class SysoutLogger(appName: String) extends Logger {
-
-    def trace(t: => Throwable) {
-      t.printStackTrace()
-      println(t)
-    }
-
-    def success(message: => String) {
-      println("%s success: " + appName + message)
-    }
-
-    def log(level: Level.Value, message: => String):Unit= println((level match {
-      case Level.Info => ""
-      case Level.Error => "[ERROR]"
-      case x => x.toString }) + message)
-  }
-
-  /**
-   * Manages global state. This is not a full-blown STM so be cautious not to lose
-   * state when doing several updates depending on another.
-   */
   object GlobalState {
     private[this] val state = new AtomicReference(RevolverState.initial)
 
@@ -65,17 +41,9 @@ object CiPlugin extends AutoPlugin {
     def initial = RevolverState(Map.empty)
   }
 
-  case class AppProcess(projectRef: ProjectRef, log: Logger)(process: Process) {
-    val shutdownHook = createShutdownHook("... killing ...")
-
-    def createShutdownHook(msg: => String) =
-      new Thread(new Runnable {
-        def run() {
-          if (isRunning) {
-            log.info(msg)
-            process.destroy()
-          }
-        }
+  case class AppProcess(projectRef: ProjectRef)(process: Process) {
+    val shutdownHook = new Thread(new Runnable {
+        def run() = { if (isRunning) process.destroy() }
       })
 
     @volatile var finishState: Option[Int] = None
@@ -85,7 +53,6 @@ object CiPlugin extends AutoPlugin {
         def run() {
           val code = process.exitValue()
           finishState = Some(code)
-          log.info("... finished with exit code %d" format code)
           unregisterShutdownHook()
           Actions.unregisterAppProcess(projectRef)
         }
@@ -121,11 +88,11 @@ object CiPlugin extends AutoPlugin {
 
       // fail early
       val theMainClass = mainClass.get
-      val logger = new SysoutLogger(logTag)
+      //val logger = new SysoutLogger(logTag)
       streams.log.info(s"Starting application ${project.project} in the background ...")
 
-      val appProcess= AppProcess(project, logger) {
-          forkRun(options, theMainClass, cp.map(_.data), args ++ startConfig.startArgs, logger, startConfig.jvmArgs)
+      val appProcess= AppProcess(project/*, logger*/) {
+          forkRun(options, theMainClass, cp.map(_.data), args ++ startConfig.startArgs, /*logger,*/ startConfig.jvmArgs)
       }
       registerAppProcess(project, appProcess)
       appProcess
@@ -197,7 +164,7 @@ object CiPlugin extends AutoPlugin {
   }
 
   object autoImport{
-    lazy val container  = config("container").hide
+    lazy val container  = config("container") hide
     lazy val start      = taskKey[Process]("start container")
     lazy val stop       = taskKey[Unit]("stop container")
     lazy val launchCmd  = taskKey[Seq[String]]("launch-cmd")
@@ -284,7 +251,7 @@ object CiPlugin extends AutoPlugin {
         }
 
         // create .jar files for depended-on projects in WEB-INF/lib
-        for {
+        /*for {
           cpItem    <- fullClasspath.toList
           dir        = cpItem.data
           if dir.isDirectory
@@ -300,7 +267,7 @@ object CiPlugin extends AutoPlugin {
           }
           jarFile    = cpArt.name + ".jar"
           _          = IO.jar(files, webappLibDir / jarFile, new Manifest)
-        } yield ()
+        } yield ()*/
 
         // copy this project's library dependency .jar files to WEB-INF/lib
         for {
@@ -342,16 +309,18 @@ object CiPlugin extends AutoPlugin {
     reLogTagUnscoped <<= thisProjectRef(_.project),
 
     // bundles the various parameters for forking
-    reForkOptions <<= (taskTemporaryDirectory, scalaInstance, baseDirectory in reStart, javaOptions in reStart, outputStrategy,
-      javaHome) map ( (tmp, si, base, jvmOptions, strategy, javaHomeDir) =>
+    reForkOptions <<= (
+      taskTemporaryDirectory,
+      scalaInstance,
+      baseDirectory in reStart, javaOptions in reStart, outputStrategy,javaHome) map (
+      (tmp, si, base, jvmOptions, strategy, javaHomeDir) =>
       ForkOptions(
         javaHomeDir,
         strategy,
         si.jars,
         workingDirectory = Some(base),
         runJVMOptions = jvmOptions,
-        connectInput = false
-      )
+        connectInput = false )
       )
   ) ++ tomcat(port=8082)
 
@@ -367,27 +336,32 @@ object CiPlugin extends AutoPlugin {
     reStartArgs in Global := Seq.empty
   )
 
-
   private def portArg(port: Int): Seq[String] =
     if (port > 0) Seq("--port", port.toString) else Nil
 
-  private val tomcatRunner: ModuleID =
-    ("com.github.jsimone" % "webapp-runner" % "7.0.34.1" % "container").intransitive
+  def tomcat(port: Int  = -1,args: Seq[String]   = Nil): Seq[Setting[_]] = {
+    val runnerArgs = Seq("webapp.runner.launch.Main") ++ portArg(port) ++ args
+    val atomicRef: AtomicReference[Option[Process]] = new AtomicReference(None)
 
-  def tomcat(libs: Seq[ModuleID] = Seq(tomcatRunner),
-             main: String        = "webapp.runner.launch.Main",
-             port: Int           = -1,
-             args: Seq[String]   = Nil): Seq[Setting[_]] = {
-    val runnerArgs = Seq(main) ++ portArg(port) ++ args
-    runnerContainer(libs, runnerArgs) ++ warSettings ++ webappSettings
+   Seq(ivyConfigurations += container,
+     libraryDependencies ++= Seq(("com.github.jsimone" % "webapp-runner" % "7.0.34.1" % "container").intransitive)) ++
+     warSettings ++ webappSettings ++
+      inConfig(container) {
+        Seq(start         <<= startTask(atomicRef) dependsOn (prepareWebapp in webapp),
+          stop            <<= stopTask(atomicRef),
+          launchCmd       <<= (webappDest in webapp) map { d => runnerArgs :+ d.getPath },
+          options := reForkOptions.value,
+          onLoad in Global <<= onLoadSetting(atomicRef),
+          javaOptions      <<= javaOptions in Compile
+        )
+      }
   }
 
-  def forkRun(config: ForkOptions, mainClass: String, classpath: Seq[File], options: Seq[String], log: Logger, extraJvmArgs: Seq[String]): Process = {
-    log.info(options.mkString("Starting " + mainClass + ".main(", ", ", ")"))
+  def forkRun(config: ForkOptions, mainClass: String, classpath: Seq[File], options: Seq[String], /*log: Logger, */extraJvmArgs: Seq[String]): Process = {
     val scalaOptions = "-classpath" :: Path.makeString(classpath) :: mainClass :: options.toList
     val newOptions =
       config.copy(
-        outputStrategy = Some(config.outputStrategy getOrElse LoggedOutput(log)),
+        outputStrategy = config.outputStrategy,
         runJVMOptions = config.runJVMOptions ++ extraJvmArgs)
 
     Fork.scala.fork(newOptions, scalaOptions)
@@ -411,13 +385,12 @@ object CiPlugin extends AutoPlugin {
   }
 
   def startTask(atomicRef: AtomicReference[Option[Process]]): Def.Initialize[Task[Process]] =
-    (  launchCmd in container
-      , javaOptions in container
-      , classpathTypes in container
-      , update in container
-      , options in container
-      , streams
-      ) map {
+    (  launchCmd in container,
+      javaOptions in container,
+      classpathTypes in container,
+      update in container,
+      options in container,
+      streams) map {
       (  launchCmd
          , javaOptions
          , classpathTypes
@@ -449,25 +422,4 @@ object CiPlugin extends AutoPlugin {
       state.addExitHook(shutdown(state.log, atomicRef))
     }
   }
-
-  def containerSettings(launchCmdTask: Def.Initialize[Task[Seq[String]]],
-                         forkOptions: ForkOptions = new ForkOptions
-                         ): Seq[Setting[_]] = {
-    val atomicRef: AtomicReference[Option[Process]] = new AtomicReference(None)
-
-    inConfig(container) {
-      Seq(start            <<= startTask(atomicRef) dependsOn (prepareWebapp in webapp)
-        , stop             <<= stopTask(atomicRef)
-        , launchCmd        <<= launchCmdTask
-        , options           := forkOptions
-        , onLoad in Global <<= onLoadSetting(atomicRef)
-        , javaOptions      <<= javaOptions in Compile
-      )
-    } ++ Seq(ivyConfigurations += container)
-  }
-
-  def runnerContainer(libs: Seq[ModuleID], args: Seq[String]): Seq[Setting[_]] =
-    Seq(libraryDependencies ++= libs) ++
-      containerSettings((webappDest in webapp) map { d => args :+ d.getPath })
-
 }
