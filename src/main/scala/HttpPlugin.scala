@@ -7,6 +7,7 @@ import akka.pattern.ask
 import akka.stream.scaladsl.Flow
 import akka.stream.{FlowMaterializer, MaterializerSettings}
 import akka.util.Timeout
+import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.duration._
 
@@ -24,10 +25,13 @@ object AkkaHttp extends App{
     }
   }
 
-  println("START SERVER")
-  implicit val system = ActorSystem()
+  implicit val system = ActorSystem("ci", ConfigFactory.parseString(
+    """
+      |akka.debug.receive = on
+    """.stripMargin))
+
   implicit val materializer = FlowMaterializer(MaterializerSettings(system))
-  import synrc.ci.AkkaHttp.system.dispatcher
+  import system.dispatcher
 
   implicit val askTimeout: Timeout = 500.millis
 
@@ -37,9 +41,9 @@ object AkkaHttp extends App{
     case Http.ServerBinding(localAddress, connectionStream) ⇒
       Flow(connectionStream).foreach {
         case Http.IncomingConnection(remoteAddress, requestProducer, responseConsumer) ⇒
-//          println("Accepted new connection from " + remoteAddress)
+          println("Accepted new connection from " + remoteAddress)
           Flow(requestProducer).map(Routes.requestHandler).produceTo(responseConsumer)
-      }//.consume(materializer)
+      }
   }
 
   println(s"Server online at http://localhost:8080/\nPress RETURN to stop...")

@@ -14,7 +14,6 @@ object SbtCiBuild extends Build{
     sbtPlugin := true,
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-actor" % "2.3.7",
-      "com.typesafe.akka" %% "akka-actor" % "2.3.7",
       "com.typesafe.akka" %% "akka-contrib" % "2.3.7",
       "com.typesafe.akka" %% "akka-remote" % "2.3.7",
       "com.typesafe.akka" %% "akka-persistence-experimental" % "2.3.7",
