@@ -1,8 +1,9 @@
+package sbt.plugins
+
 import sbt._
 import sbt.Keys._
 
-object SbtCiBuild extends Build{
-
+object CiBuild extends Build{
   lazy val root = Project(
     id="sbt-ci",
     base = file(".")
@@ -12,6 +13,7 @@ object SbtCiBuild extends Build{
     version := "0.1",
     scalaVersion := "2.10.4",
     sbtPlugin := true,
+    exportJars := true,
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-actor" % "2.3.7",
       "com.typesafe.akka" %% "akka-contrib" % "2.3.7",
@@ -21,7 +23,6 @@ object SbtCiBuild extends Build{
       "com.typesafe.akka" %% "akka-stream-experimental" % "0.7"),
     resolvers ++= Seq(
       "Akka"     at "http://repo.akka.io/releases/",
-      "Spray"    at "http://repo.spray.io",
       "Typesafe" at "http://repo.typesafe.com/typesafe/releases/")
   )
 }
