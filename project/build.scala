@@ -19,8 +19,8 @@ object CiBuild extends Build{
       "com.typesafe.akka" %% "akka-contrib" % "2.3.7",
       "com.typesafe.akka" %% "akka-remote" % "2.3.7",
       "com.typesafe.akka" %% "akka-persistence-experimental" % "2.3.7",
-      "com.typesafe.akka" %% "akka-http-core-experimental" % "0.7",
-      "com.typesafe.akka" %% "akka-stream-experimental" % "0.7"),
+      "com.typesafe.akka" %% "akka-http-core-experimental" % "0.11",
+      "com.typesafe.akka" %% "akka-stream-experimental" % "0.11"),
     resolvers ++= Seq(
       "Akka"     at "http://repo.akka.io/releases/",
       "Typesafe" at "http://repo.typesafe.com/typesafe/releases/")
