@@ -35,7 +35,7 @@ object CiPlugin extends AutoPlugin {
     lazy val status = taskKey[Unit]("git status")
     lazy val re     = taskKey[Analysis]("rebuild")
   }
-  import sbt.plugins.CiPlugin.autoImport._
+  import autoImport._
 
   override def requires = plugins.JvmPlugin
   override def trigger = allRequirements
