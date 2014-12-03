@@ -1,4 +1,4 @@
-package sbt.plugins
+package ci.sbt
 
 import java.io.{File, FileOutputStream}
 import java.net.JarURLConnection
@@ -6,28 +6,25 @@ import java.util.jar.JarEntry
 
 import akka.actor.ActorSystem
 import akka.http.Http
-import akka.http.model.HttpEntity.ChunkStreamPart
 import akka.http.model.MediaTypes._
 import akka.http.model.StatusCodes.{NoContent, NotImplemented}
 import akka.pattern.ask
 import akka.stream.FlowMaterializer
 import akka.stream.scaladsl.{Sink, Source}
-import akka.util.{ByteString, Timeout}
+import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import sbt.Keys._
 import sbt._
 import sbt.inc.Analysis
-//import scalaz._
+import sbt.plugins._
 
 import scala.concurrent.duration._
 
-object CiPlugin extends AutoPlugin {
-
+object CiPlugin extends AutoPlugin  with FileRoute
+                                    with LandingPage {
   var actSystem: Option[ActorSystem] = None
 
   object autoImport{
-    lazy val sets = settingKey[ActorSystem]("")
-    lazy val sys    = taskKey[ActorSystem]("ci actor system")
     lazy val start  = taskKey[Unit]("start CI server")
     lazy val stop   = taskKey[Unit]("stop CI server")
     lazy val cp     = taskKey[Unit]("make CI assets")
@@ -35,21 +32,16 @@ object CiPlugin extends AutoPlugin {
     lazy val status = taskKey[Unit]("git status")
     lazy val re     = taskKey[Analysis]("rebuild")
   }
-  import sbt.plugins.CiPlugin.autoImport._
+  import ci.sbt.CiPlugin.autoImport._
 
-  override def requires = plugins.JvmPlugin
-  override def trigger = allRequirements
+  override def requires = JvmPlugin
+  override def trigger = noTrigger
   override lazy val projectSettings = Seq(
     cp <<= copyAssets,
-    start <<= startCi,
+    start <<= startCi.dependsOn(cp),
     stop  <<= stopCi,
     onUnload in Global ~= (unloadSystem compose _),
     re<<=runTask(compile in Compile))
-
-  // Compile less assets, minify js before include into the target
-  // mappings is scoped by the configuration and the specific package task
-  // mappings in (Compile, packageBin) += {(baseDirectory.value / "in" / "example.txt") -> "out/example.txt"}
-  // not include resources unmanagedResources in Compile := Seq()
 
   def copyAssets() = Def.task{
     val s:TaskStreams = streams.value
@@ -62,30 +54,34 @@ object CiPlugin extends AutoPlugin {
     val assets:List[JarEntry] = jar.entries.filter(_.getName.startsWith("assets")).toList
     assets.filter(_.isDirectory).map(e=> new File(rootDir + File.separator + e.getName).mkdir)
     assets.filterNot(_.isDirectory).map(e => {
+      val name = rootDir + File.separator + e.getName
       val is = jar.getInputStream(e)
-      val os = new FileOutputStream(new File(rootDir + File.separator + e.getName))
+      val os = new FileOutputStream(new File(name))
+      s.log.info(s"\t> copying $name...")
       while(is.available()>0) os.write(is.read)
       os.close
       is.close
     })
     jar.close
-    s.log.info("assets ready")
+    s.log.info("assets ready!")
   }
 
   def startCi(implicit port:Int = 8080) = Def.task {
-    val log:Logger = streams.value.log
+    implicit val log:Logger = streams.value.log
     val cl = getClass.getClassLoader
     val root = target.value
+
     implicit val system = ActorSystem("ci", ConfigFactory.load(cl), cl)
 
     implicit val askTimeout: Timeout = 500.millis
     import system.dispatcher
     implicit val materializer = FlowMaterializer()
 
+    actSystem = Some(system)
+
     import akka.http.model.HttpMethods._
     import akka.http.model._
 
-    actSystem = Some(system)
 
     akka.io.IO(Http) ? Http.Bind(interface = "0.0.0.0", port = port) foreach {
       case Http.ServerBinding(localAddress, connectionStream) => Source(connectionStream) foreach {
@@ -94,11 +90,18 @@ object CiPlugin extends AutoPlugin {
             log.info(s"$obj")
             //runTask(compile in Compile)
             HttpResponse(NoContent)
-          case HttpRequest(GET, Uri.Path("/history"), _, entity, _) =>
-            HttpResponse(entity = HttpEntity.Chunked(`text/plain`, fromFile(target.value / ".history")))
-          case HttpRequest(GET,_,_,r,_) =>
-                HttpResponse(entity = HttpEntity(`text/html`,
-                  s"<html><head><title>ci</title></head><body>$r</body></html>"))
+          case HttpRequest(GET, Path(Root / "assets" / ext / file), _, _, _) =>
+            staticRoute((target.value / "assets" / ext) ** file) match {
+              case Left(code) => HttpResponse(code)
+              case Right(e) => HttpResponse(entity=e)
+            }
+          case HttpRequest(GET, Path(Root / scope / task / file), _, _, _) =>
+            val finder:sbt.PathFinder = (target.value / "streams" / scope / task / "$global" / "streams") ** file
+
+            HttpResponse(entity = HttpEntity.Chunked(`text/plain`,
+              bin(finder.get.headOption.getOrElse(target.value / ".history"))))
+
+          case HttpRequest(GET,_,_,r,_) => index
           case _: HttpRequest => HttpResponse(NotImplemented)}.to(Sink(resp)).run() }}
   }
 
@@ -109,9 +112,6 @@ object CiPlugin extends AutoPlugin {
     actSystem = None
     s
   }
-
-  private [plugins] def fromFile(file:File):Source[ChunkStreamPart] =
-    Source(io.Source.fromFile(file).getLines()).map(l => ChunkStreamPart(ByteString(l+'\n')))
 
   def runTask(taskKey:TaskKey[Analysis]) = Def.task[Analysis] {
     Project.runTask(taskKey, state.value, checkCycles = false) match {
@@ -124,4 +124,5 @@ object CiPlugin extends AutoPlugin {
         v
     }
   }
+
 }

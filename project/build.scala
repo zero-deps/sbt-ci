@@ -1,4 +1,4 @@
-package sbt.plugins
+package synrc.sbt
 
 import sbt._
 import sbt.Keys._
@@ -19,11 +19,13 @@ object CiBuild extends Build{
       "com.typesafe.akka" %% "akka-contrib" % "2.3.7",
       "com.typesafe.akka" %% "akka-remote" % "2.3.7",
       "com.typesafe.akka" %% "akka-persistence-experimental" % "2.3.7",
-      "com.typesafe.akka" %% "akka-http-core-experimental" % "0.11",
-      "com.typesafe.akka" %% "akka-parsing-experimental" % "0.11",
-      "com.typesafe.akka" %% "akka-stream-experimental" % "0.11",
-      "org.scalaz" %% "scalaz-core" % "7.1.0"),
+      "com.typesafe.akka" %% "akka-http-core-experimental" % "0.11" withSources(),
+      "com.typesafe.akka" %% "akka-parsing-experimental" % "0.11" withSources(),
+      "com.typesafe.akka" %% "akka-stream-experimental" % "0.11" withSources(),
+      "io.spray" %% "spray-json" % "1.3.1",
+      "org.scalaz" %% "scalaz-core" % "7.1.0" withSources()),
     resolvers ++= Seq(
       "Akka"     at "http://repo.akka.io/releases/",
-      Classpaths.typesafeReleases))
+      Classpaths.typesafeReleases,
+      Classpaths.typesafeSnapshots))
 }
