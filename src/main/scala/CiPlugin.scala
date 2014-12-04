@@ -9,9 +9,8 @@ import akka.actor.ActorSystem
 import akka.http.Http
 import akka.http.model.MediaTypes._
 import akka.http.model.StatusCodes.{NoContent, NotImplemented}
-import akka.pattern.ask
 import akka.stream.FlowMaterializer
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.Flow
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import sbt.Keys._
@@ -183,35 +182,39 @@ object CiPlugin extends AutoPlugin  with FileRoute
     implicit val system = ActorSystem("ci", ConfigFactory.load(cl), cl)
 
     implicit val askTimeout: Timeout = 500.millis
-    import system.dispatcher
     implicit val materializer = FlowMaterializer()
 
     actSystem = Some(system)
 
+//    import ScalaXmlSupport._
+//    import Directives._
     import akka.http.model.HttpMethods._
     import akka.http.model._
 
+    val binding = Http().bind(interface = "0.0.0.0", port = port)
 
-    akka.io.IO(Http) ? Http.Bind(interface = "0.0.0.0", port = port) foreach {
-      case Http.ServerBinding(localAddress, connectionStream) => Source(connectionStream) foreach {
-        case Http.IncomingConnection(remote, req, resp) => Source(req).map {
-          case HttpRequest(POST, u, _, obj, _) =>
-            log.info(s"$obj")
-            //runTask(compile in Compile)
-            HttpResponse(NoContent)
-          case HttpRequest(GET, Path(Root / "assets" / ext / file), _, _, _) =>
-            staticRoute((target.value / "assets" / ext) ** file) match {
-              case Left(code) => HttpResponse(code)
-              case Right(e) => HttpResponse(entity=e)
-            }
-          case HttpRequest(GET, Path(Root / scope / task / file), _, _, _) =>
-            val finder:sbt.PathFinder = (target.value / "streams" / scope / task / "$global" / "streams") ** file
+    val route = Flow[HttpRequest].map {
+      case HttpRequest(POST, u, _, obj, _) =>
+        log.info(s"$obj")
+        //runTask(compile in Compile)
+        HttpResponse(NoContent)
+      case HttpRequest(GET, Path(Root / "assets" / ext / file), _, _, _) =>
+        staticRoute((target.value / "assets" / ext) ** file) match {
+          case Left(code) => HttpResponse(code)
+          case Right(e) => HttpResponse(entity=e)
+        }
+      case HttpRequest(GET, Path(Root / scope / task / file), _, _, _) =>
+        val finder:sbt.PathFinder = (target.value / "streams" / scope / task / "$global" / "streams") ** file
 
-            HttpResponse(entity = HttpEntity.Chunked(`text/plain`,
-              bin(finder.get.headOption.getOrElse(target.value / ".history"))))
+        HttpResponse(entity = HttpEntity.Chunked(`text/plain`,
+          bin(finder.get.headOption.getOrElse(target.value / ".history"))))
 
-          case HttpRequest(GET,_,_,r,_) => index
-          case _: HttpRequest => HttpResponse(NotImplemented)}.to(Sink(resp)).run() }}
+      case HttpRequest(GET,_,_,r,_) => index
+      case _: HttpRequest => HttpResponse(NotImplemented)
+    }
+
+    val materializedMap = binding startHandlingWith route
+    //=> store map to stop server
   }
 
   def stopCi():Def.Initialize[Task[Unit]] = Def.task{unloadSystem(state.value)}

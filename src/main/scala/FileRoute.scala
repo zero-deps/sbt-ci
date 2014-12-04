@@ -49,7 +49,7 @@ trait FileRoute {this:AutoPlugin =>
   }
 
   def bin(file:File):Source[ChunkStreamPart] =
-    Source(new BufferedIterator(nmap(file.toPath), chunkSize)).map(ChunkStreamPart.apply)
+    Source(() => new BufferedIterator(nmap(file.toPath), chunkSize)).map(ChunkStreamPart.apply)
 
   private def nmap(path:java.nio.file.Path):MappedByteBuffer = {
     val channel = FileChannel.open(path, StandardOpenOption.READ)
