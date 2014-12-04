@@ -15,7 +15,7 @@ import sbt.AutoPlugin
 
 
 trait FileRoute {this:AutoPlugin =>
-  val chunkSize = 2048
+  val chunkSize = 1024
 
   def staticRoute(fnd:sbt.PathFinder):FileResponce = fnd.get match {
     case Nil => Left(NotFound)

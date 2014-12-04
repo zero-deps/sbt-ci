@@ -1,20 +1,29 @@
-var ballmer_peak = React.createClass({displayName: 'balmer_peak',
-  getInitialState: function() {
-    return {bac: 0};
-  },
-  handleChange: function(event) {
-    this.setState({bac: event.target.value});
-  },
-  render: function() {
-    var pct = this.state.bac;
+var data = [
+  {name: "task", text: "This is one"},
+  {name: "another task", text: "This is *another*"}
+];
+
+var sbt_task = React.createClass({displayName:'task',
+  render: function(){
+    return React.createElement('li', null, this.props.name);
+  }
+});
+
+var sbt_tasks = React.createClass({displayName:'tasks',
+  render: function(){
+    var taskNodes = this.props.data.map(function(task){
+      return (
+        React.createElement(sbt_task,{name:task.name})
+      );
+    });
     return (
-      React.createElement("input", {type: "text", onChange: this.handleChange, value: this.state.bac}),
-      React.createElement("b", null, pct)
+      React.createElement('div', {className:"sbt tasks"}, taskNodes)
     );
   }
 });
 
-React.render(React.createElement(ballmer_peak), document.getElementById('bdy'));
+
+React.render(React.createElement(sbt_tasks, {data:data}), document.getElementById('bdy'));
 
 Reveal.initialize({history: true,center: true,embedded: true,
   dependencies: [
