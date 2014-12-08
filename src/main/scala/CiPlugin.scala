@@ -26,8 +26,6 @@ object CiPlugin extends AutoPlugin  with FileRoute
                                     with WebHooks {
   //> keep in state
   var as:Option[ActorSystem] = None
-//  var binding:Http.ServerBinding = _
-//  var materializerMap:MaterializedMap = _
 
   object autoImport{
     lazy val start  = taskKey[Unit]("start CI server")
@@ -197,8 +195,7 @@ object CiPlugin extends AutoPlugin  with FileRoute
 
   val unloadSystem = (s: State) => {
     as.foreach(_.shutdown())
-    //implicit val context = as.dispatcher
-    //binding.unbind(materializerMap).onComplete(_=>as.shutdown)
+    as = None
     s
   }
 

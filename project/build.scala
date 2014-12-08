@@ -1,4 +1,4 @@
-package synrc.sbt
+package playtech.sbt
 
 import sbt._
 import sbt.Keys._
