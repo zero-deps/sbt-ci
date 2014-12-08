@@ -6,6 +6,7 @@ import sbt.AutoPlugin
 
 trait LandingPage { this:AutoPlugin =>
 
+
   def index:HttpResponse = HttpResponse(entity=HttpEntity(`text/html`,
     s"""
       |<!DOCTYPE html>
@@ -36,7 +37,7 @@ trait LandingPage { this:AutoPlugin =>
       |   <div class="page-wrapper">
       |     <div class="container">
       |       <div id="bdy"></div>
-      |       <div class="embed-responsive embed-responsive-16by9">${reveal(Seq(/*"assets/md/example.md"*/))}</div>
+      |       <div class="embed-responsive embed-responsive-16by9">${reveal(Seq("assets/md/example.md"))}</div>
       |     </div>
       |   </div>
       | <div>

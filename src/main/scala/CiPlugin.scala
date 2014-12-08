@@ -9,6 +9,7 @@ import akka.actor.ActorSystem
 import akka.http.Http
 import akka.http.model.MediaTypes._
 import akka.http.model.StatusCodes.{NoContent, NotImplemented}
+import akka.http.server.Route
 import akka.stream.FlowMaterializer
 import akka.stream.scaladsl.Flow
 import akka.util.Timeout
@@ -21,8 +22,12 @@ import sbt.plugins._
 import scala.concurrent.duration._
 
 object CiPlugin extends AutoPlugin  with FileRoute
-                                    with LandingPage {
-  var actSystem: Option[ActorSystem] = None
+                                    with LandingPage
+                                    with WebHooks {
+  //> keep in state
+  var as:Option[ActorSystem] = None
+//  var binding:Http.ServerBinding = _
+//  var materializerMap:MaterializedMap = _
 
   object autoImport{
     lazy val start  = taskKey[Unit]("start CI server")
@@ -67,31 +72,6 @@ object CiPlugin extends AutoPlugin  with FileRoute
     jar.close
     s.log.info("assets ready!")
   }
-
-  /*
-  def aboutProject(s: State): String =
-      val e = Project.extract(s)
-      val version = e.getOpt(Keys.version) match { case None => ""; case Some(v) => " " + v }
-      val current = "The current project is " + Reference.display(e.currentRef) + version + "\n"
-
-  def aboutPlugins(e: Extracted): String =
-    {
-      def list(b: BuildUnit) = b.plugins.detected.autoPlugins.map(_.value.label) ++ b.plugins.detected.plugins.names
-      val allPluginNames = e.structure.units.values.flatMap(u => list(u.unit)).toSeq.distinct
-      if (allPluginNames.isEmpty) "" else allPluginNames.mkString("Available Plugins: ", ", ", "")
-    }
-  *def showSettingLike(command: String, preamble: String, cutoff: Int, keep: AttributeKey[_] => Boolean) =
-    Command(command, settingsBrief(command), settingsDetailed(command))(showSettingParser(keep)) {
-      case (s: State, (verbosity: Int, selected: Option[String])) =>
-        if (selected.isEmpty) System.out.println(preamble)
-        val prominentOnly = verbosity <= 1
-        val verboseFilter = if (prominentOnly) highPass(cutoff) else topNRanked(25 * verbosity)
-        System.out.println(tasksHelp(s, keys => verboseFilter(keys filter keep), selected))
-        System.out.println()
-        if (prominentOnly) System.out.println(moreAvailableMessage(command, selected.isDefined))
-        s
-    }
-  * */
 
   def test = Def.task{
     val s = state.value
@@ -147,7 +127,8 @@ object CiPlugin extends AutoPlugin  with FileRoute
           else
             layoutDetails(details)
         } catch {
-          case pse: PatternSyntaxException => sys.error("Invalid regular expression (java.util.regex syntax).\n" + pse.getMessage)
+          case pse: PatternSyntaxException => sys.error("Invalid regular expression (java.util.regex syntax).\n" +
+            pse.getMessage)
         }
       }
 
@@ -174,26 +155,21 @@ object CiPlugin extends AutoPlugin  with FileRoute
     System.out.println(tasksHelp(s, highPass(1), None))
   }
 
-  def startCi(implicit port:Int = 8080) = Def.task {
+  def startCi(implicit port:Int = 1488) = Def.task {
     implicit val log:Logger = streams.value.log
     val cl = getClass.getClassLoader
     val root = target.value
 
     implicit val system = ActorSystem("ci", ConfigFactory.load(cl), cl)
-
     implicit val askTimeout: Timeout = 500.millis
     implicit val materializer = FlowMaterializer()
 
-    actSystem = Some(system)
-
-//    import ScalaXmlSupport._
-//    import Directives._
     import akka.http.model.HttpMethods._
     import akka.http.model._
 
     val binding = Http().bind(interface = "0.0.0.0", port = port)
 
-    val route = Flow[HttpRequest].map {
+    val routeFlow:Flow[HttpRequest,HttpResponse] = Flow[HttpRequest].map {
       case HttpRequest(POST, u, _, obj, _) =>
         log.info(s"$obj")
         //runTask(compile in Compile)
@@ -213,15 +189,16 @@ object CiPlugin extends AutoPlugin  with FileRoute
       case _: HttpRequest => HttpResponse(NotImplemented)
     }
 
-    val materializedMap = binding startHandlingWith route
-    //=> store map to stop server
+    binding startHandlingWith routeFlow
+    as = Some(implicitly[ActorSystem])
   }
 
   def stopCi():Def.Initialize[Task[Unit]] = Def.task{unloadSystem(state.value)}
 
   val unloadSystem = (s: State) => {
-    actSystem.foreach(_.shutdown)
-    actSystem = None
+    as.foreach(_.shutdown())
+    //implicit val context = as.dispatcher
+    //binding.unbind(materializerMap).onComplete(_=>as.shutdown)
     s
   }
 

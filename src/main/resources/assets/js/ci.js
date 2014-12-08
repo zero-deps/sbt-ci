@@ -22,6 +22,16 @@ var sbt_tasks = React.createClass({displayName:'tasks',
   }
 });
 
+var ws = {};
+ws.get = function(url,callback){
+  var req = new XMLHttpRequest();
+  req.onreadystatechange = function() {
+      if (req.readyState == 4 && req.status == 200) {callback(req.response);}
+  };
+  req.open('GET', url, true);
+  req.send();
+};
+
 
 React.render(React.createElement(sbt_tasks, {data:data}), document.getElementById('bdy'));
 
