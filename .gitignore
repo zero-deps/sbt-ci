@@ -3,4 +3,4 @@ project/project
 project/target
 .idea
 *.orig
-node_modules/*
+src/main/resources/node_modules/*
