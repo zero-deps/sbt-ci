@@ -40,7 +40,7 @@ trait LandingPage { this:AutoPlugin =>
       |       <div class="embed-responsive embed-responsive-16by9">${reveal(Seq("assets/md/example.md"))}</div>
       |     </div>
       |   </div>
-      | <div>
+      | </div>
       | <footer class="section">mws(c)2014</footer>
       | <script type="text/javascript" src="assets/js/ci.js"></script>
       |</body>

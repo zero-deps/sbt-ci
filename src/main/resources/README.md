@@ -13,3 +13,23 @@ will install required modules to work with javascript and css of the project.
 # Modules
 
 [Browserify](http://browserify.org/)
+
+# SVG
+
+<link rel="stylesheet" type="text/css" href="./node_modules/evil-icons/app/assets/stylesheets/evil-icons.css">
+
+var icons = require("evil-icons")
+
+/* A string with SVG sprite */
+icons.sprite;
+
+/* Icons rendering */
+icons.icon("ei-search");
+icons.icon("ei-arrow-right", {size: "m"});
+icons.icon("ei-envelope", {size: "l", class: "custom-class"});
+
+icons.icon("ei-arrow-right", {size: "m"})
+icons.icon("ei-envelope", {class: "custom-class"})
+
+.icon {fill: green;}
+.icon--ei-facebook {  fill: blue;}

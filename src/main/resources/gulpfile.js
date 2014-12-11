@@ -17,7 +17,7 @@ var sourcemaps = require('gulp-sourcemaps');
 var prod = false;
 var conf = {
   jsx : ['./js/ci.js'],
-  less: ['./less/ci.less', './less/default.less', './less/reveal.min.less'],
+  less: ['./less/ci.less', './less/default.less'],
   css:['./assets/css/'],
   js: ['./assets/js/'],
   maps: './maps'};
@@ -32,6 +32,7 @@ function scr(watch){
   if(watch) bnd = watchify(bnd);
 
   re = function(){
+    console.log('reload js');
     return bnd.bundle()
       .pipe(source('ci.js'))
       .pipe(streamify(uglify()))
@@ -54,7 +55,7 @@ gulp.task('less',['clean-css'],function(){
   return gulp.src(conf.less)
 //    .pipe(sourcemaps.init())
     .pipe(less({
-      plugins: [cleancss],
+//      plugins: [cleancss],
       paths: [path.join(__dirname, 'less', 'includes')]
     }))
 //    .pipe(sourcemaps.write(conf.maps))

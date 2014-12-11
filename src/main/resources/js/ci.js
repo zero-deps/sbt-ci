@@ -1,30 +1,3 @@
-var React = require('react');
-var View = require('./view.jsx');
-
-var data = [
-  {name: "task", text: "This is one"},
-  {name: "another task", text: "This is *another*"}
-];
-
-var sbt_task = React.createClass({displayName:'task',
-  render: function(){
-    return React.createElement('li', null, this.props.name);
-  }
-});
-
-var sbt_tasks = React.createClass({displayName:'tasks',
-  render: function(){
-    var taskNodes = this.props.data.map(function(task){
-      return (
-        React.createElement(sbt_task,{name:task.name})
-      );
-    });
-    return (
-      React.createElement('div', {className:"sbt tasks"}, taskNodes)
-    );
-  }
-});
-
 var ws = {};
 ws.get = function(url,callback){
   var req = new XMLHttpRequest();
@@ -35,7 +8,36 @@ ws.get = function(url,callback){
   req.send();
 };
 
-React.render(React.createElement(sbt_tasks, {data:data}), document.getElementById('bdy'));
+var React = require('react');
+var View = require('./view.jsx');
+
+var data2 = [
+  {name: "task1", text: "This is one"},
+  {name: "task2", text: "This is *another*"}
+];
+
+var SbtTask = React.createClass({
+  render: function(){
+    return <li>{this.props.task.text}</li>;
+  }
+});
+
+var SbtTasks = React.createClass({
+  render: function(){
+    return (
+      <div>
+        {this.props.data.map(function(item){
+          return <SbtTask key={item.name} task={item}/>;
+        })}
+      </div>
+    );
+  }
+});
+
+
+React.render(
+  <SbtTasks data={data2}/>,
+  document.getElementById('bdy'));
 
 /*Reveal.initialize({history: true,center: true,embedded: true,
   dependencies: [
