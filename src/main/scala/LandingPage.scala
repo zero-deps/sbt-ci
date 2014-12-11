@@ -23,7 +23,7 @@ trait LandingPage { this:AutoPlugin =>
       | <link rel="stylesheet" href="assets/css/reveal.min.css">
       |	<link rel="stylesheet" href="assets/css/default.css" id="theme">
       | <link rel="stylesheet" href="assets/css/ci.css" />
-      | <script type="text/javascript" src="assets/js/react.js"></script>
+      | <!--script type="text/javascript" src="assets/js/react.js"></script-->
       |</head>
       |<body>
       | <div class="page">

@@ -9,7 +9,7 @@ import akka.actor.ActorSystem
 import akka.http.Http
 import akka.http.model.MediaTypes._
 import akka.http.model.StatusCodes.{NoContent, NotImplemented}
-import akka.http.server.Route
+//import akka.http.server.Route
 import akka.stream.FlowMaterializer
 import akka.stream.scaladsl.Flow
 import akka.util.Timeout
@@ -154,7 +154,7 @@ object CiPlugin extends AutoPlugin  with FileRoute
   }
 
   def startCi(implicit port:Int = 1488) = Def.task {
-    implicit val log:Logger = streams.value.log
+    //implicit val log:Logger = streams.value.log
     val cl = getClass.getClassLoader
     val root = target.value
 
@@ -169,7 +169,7 @@ object CiPlugin extends AutoPlugin  with FileRoute
 
     val routeFlow:Flow[HttpRequest,HttpResponse] = Flow[HttpRequest].map {
       case HttpRequest(POST, u, _, obj, _) =>
-        log.info(s"$obj")
+        streams.value.log.info(s"$obj")
         //runTask(compile in Compile)
         HttpResponse(NoContent)
       case HttpRequest(GET, Path(Root / "assets" / ext / file), _, _, _) =>

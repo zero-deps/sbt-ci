@@ -1,8 +1,8 @@
-package ci.sbt
+package ci
 
 import akka.http.model.{ResponseEntity, StatusCode}
 
-object `package`{
+package object sbt{
   /**
    * target:
    * - assets

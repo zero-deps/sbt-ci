@@ -1,8 +1,8 @@
 package ci.sbt
 
-import akka.http.server.RoutingLog
+//import akka.http.server.RoutingLog
 
-trait WebHooks extends RoutingLog{
+trait WebHooks {
 
   import spray.json._
   import DefaultJsonProtocol._
