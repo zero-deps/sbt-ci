@@ -4,3 +4,5 @@ project/target
 .idea
 *.orig
 src/main/resources/node_modules/*
+demo/project/project
+demo/project/target

@@ -4,6 +4,8 @@ import sbt._
 import sbt.Keys._
 
 object CiBuild extends Build{
+  import ScriptedPlugin._
+
   lazy val root = Project(
     id="sbt-ci",
     base = file(".")
@@ -26,4 +28,6 @@ object CiBuild extends Build{
       "spray" at "http://http://repo.spray.io",
       Classpaths.typesafeReleases,
       Classpaths.typesafeSnapshots))
+  .settings(scriptedSettings: _*)
+  .settings(scriptedLaunchOpts <+= version apply { v => "-Dproject.version=" + v })
 }
