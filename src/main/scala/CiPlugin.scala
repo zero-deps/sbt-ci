@@ -30,7 +30,6 @@ object CiPlugin extends AutoPlugin  with FileRoute
   object autoImport{
     lazy val start  = taskKey[Unit]("start CI server")
     lazy val stop   = taskKey[Unit]("stop CI server")
-    lazy val cp     = taskKey[Unit]("make CI assets")
     lazy val pull   = taskKey[Unit]("git pull")
     lazy val status = taskKey[Unit]("git status")
     lazy val re     = taskKey[Analysis]("rebuild")
@@ -42,24 +41,22 @@ object CiPlugin extends AutoPlugin  with FileRoute
   override def trigger = noTrigger
   override lazy val projectSettings = Seq(
     tst <<= test,
-    cp <<= copyAssets,
-    start <<= startCi.dependsOn(cp),
+    copyResources <<= copyAssetsTask,
+    start <<= startCi.dependsOn(copyResources),
     stop  <<= stopCi,
     onUnload in Global ~= (unloadSystem compose _),
     re<<=runTask(compile in Compile))
 
-  def copyAssets() = Def.task{
-    val s:TaskStreams = streams.value
+  def copyAssetsTask() = (streams, target) map { (s,root)=>
     s.log.info("prepare CI server assets...")
     val cl = getClass.getClassLoader
-    val rootDir = target.value
     val url = cl.getResource("assets")
     val jar = url.openConnection.asInstanceOf[JarURLConnection].getJarFile
     import scala.collection.JavaConversions._
     val assets:List[JarEntry] = jar.entries.filter(_.getName.startsWith("assets")).toList
-    assets.filter(_.isDirectory).map(e=> new File(rootDir + File.separator + e.getName).mkdir)
+    assets.filter(_.isDirectory).map(e=> new File(root + File.separator + e.getName).mkdir)
     assets.filterNot(_.isDirectory).map(e => {
-      val name = rootDir + File.separator + e.getName
+      val name = root + File.separator + e.getName
       val is = jar.getInputStream(e)
       val os = new FileOutputStream(new File(name))
       s.log.info(s"\t> copying $name...")
@@ -69,6 +66,7 @@ object CiPlugin extends AutoPlugin  with FileRoute
     })
     jar.close
     s.log.info("assets ready!")
+    Seq.empty[(File,File)]
   }
 
   def test = Def.task{
