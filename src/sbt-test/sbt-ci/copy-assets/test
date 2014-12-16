@@ -1,0 +1,18 @@
+# ci plugin dev server as a test
+#> copyResources
+#$ exists target/assets/css/ci.css
+# scripted test
+#> checkAssets
+# start server
+#> start
+# wait for enter
+# stop server
+#> stop
+> genresource
+> genresource2
+> checkfoo
+> show base-directory
+$ pause
+
+# scripted group/name - to run single test
+# $ copy-file changes/A.scala A.scala

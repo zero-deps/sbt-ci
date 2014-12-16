@@ -16,6 +16,18 @@ object CiBuild extends Build{
     scalaVersion := "2.10.4",
     sbtPlugin := true,
     exportJars := true,
+
+    /* override non-snapshot version in publishing */
+    isSnapshot := true,
+    /*disable publishing */
+    publish := {},
+    publishMavenStyle := false,
+    publishArtifact in Test := false,
+    publishArtifact in (Compile, packageDoc) := false,
+    publishArtifact in (Compile, packageSrc) := false,
+
+    excludeFilter in unmanagedResources ~= {_ || "node_modules" || "less"},
+
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-actor" % "2.3.7",
       "com.typesafe.akka" %% "akka-http-core-experimental" % "1.0-M1",
@@ -28,6 +40,9 @@ object CiBuild extends Build{
       "spray" at "http://http://repo.spray.io",
       Classpaths.typesafeReleases,
       Classpaths.typesafeSnapshots))
-  .settings(scriptedSettings: _*)
+  .settings(scriptedSettings ++ Seq(
+    scriptedBufferLog := false,
+    includeFilter in unmanagedResources in scriptedConf ~= {_ || "less"}
+  ): _*)
   .settings(scriptedLaunchOpts <+= version apply { v => "-Dproject.version=" + v })
 }
