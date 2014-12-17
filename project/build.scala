@@ -5,6 +5,8 @@ import sbt.Keys._
 
 object CiBuild extends Build{
   import ScriptedPlugin._
+  import Path.flat
+
 
   lazy val root = Project(
     id="sbt-ci",
@@ -19,17 +21,16 @@ object CiBuild extends Build{
 
     /* override non-snapshot version in publishing */
     isSnapshot := true,
-    /*disable publishing */
-    publish := {},
     publishMavenStyle := false,
     publishArtifact in Test := false,
     publishArtifact in (Compile, packageDoc) := false,
     publishArtifact in (Compile, packageSrc) := false,
 
-    excludeFilter in unmanagedResources ~= {_ || "node_modules" || "less"},
+    excludeFilter~={(ef)=> ef -- ".bin" },
+    mappings in (Compile,packageBin) ~= { _.filter(includeInPackage) },
 
     libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-actor" % "2.3.7",
+      "com.typesafe.akka" %% "akka-actor" % "2.3.8",
       "com.typesafe.akka" %% "akka-http-core-experimental" % "1.0-M1",
       "com.typesafe.akka" %% "akka-stream-experimental" % "1.0-M1",
       // "com.fasterxml.jackson.core" % "jackson-databind" % "2.4.3",
@@ -42,7 +43,18 @@ object CiBuild extends Build{
       Classpaths.typesafeSnapshots))
   .settings(scriptedSettings ++ Seq(
     scriptedBufferLog := false,
-    includeFilter in unmanagedResources in scriptedConf ~= {_ || "less"}
+    scriptedLaunchOpts <+= version apply { v => "-Dproject.version=" + v }
   ): _*)
-  .settings(scriptedLaunchOpts <+= version apply { v => "-Dproject.version=" + v })
+
+  import util.matching.Regex
+  implicit class RegexContext(sc: StringContext) {
+    def r = new Regex(sc.parts.mkString, sc.parts.tail.map(_ => "x"): _*)
+  }
+
+  private def includeInPackage(se:(File,String)):Boolean = se._2 match {
+    case r"""(?:node_modules/.bin/.*)""" => true
+    case r"""(?:node_modules/.*)""" => false
+    case _ => true
+  }
+
 }

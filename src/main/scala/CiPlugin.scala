@@ -41,8 +41,8 @@ object CiPlugin extends AutoPlugin  with FileRoute
   override def trigger = noTrigger
   override lazy val projectSettings = Seq(
     tst <<= test,
-    copyResources <<= copyAssetsTask,
-    start <<= startCi.dependsOn(copyResources),
+    copyResources in Compile <++= copyAssetsTask,
+    start <<= startCi.dependsOn(packageBin in Compile),
     stop  <<= stopCi,
     onUnload in Global ~= (unloadSystem compose _),
     re<<=runTask(compile in Compile))

@@ -16,7 +16,7 @@ var sourcemaps = require('gulp-sourcemaps');
 
 var prod = false;
 var conf = {
-  jsx : ['./js/ci.js'],
+  jsx : ['./jsx/ci.js'],
   less: ['./less/ci.less', './less/default.less'],
   css:['./assets/css/'],
   js: ['./assets/js/'],
@@ -45,7 +45,7 @@ function scr(watch){
 
 gulp.task('clean-js',function(js){ del(conf.js, js); });
 gulp.task('cp-js', function(){ 
-  return gulp.src(['./js/**/*.js', '!./js/ci.js'])
+  return gulp.src(['./jsx/**/*.js', '!./jsx/ci.js'])
     .pipe(gulp.dest(conf.js[0])) 
 });
 gulp.task('js', ['clean-js', 'cp-js'], function(){return scr(false);});

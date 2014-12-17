@@ -1,8 +1,18 @@
 enablePlugins(CiPlugin)
 
-name := "copy-test"
+name := "dev-server"
 
 version := "0.1.0"
+
+publish := {}
+
+publishLocal := {}
+
+publishArtifact := false
+
+exportJars := false
+
+publishArtifact in (Compile, packageBin) := false
 
 TaskKey[Unit]("check-assets") := {
   val s = streams.value
@@ -11,20 +21,14 @@ TaskKey[Unit]("check-assets") := {
   ()
 }
 
-TaskKey[Seq[File]]("genresource") <<= (unmanagedResourceDirectories in Compile) map { (dirs) =>
-  val file = dirs.head / "foo.txt"
-  IO.write(file, "bye")
-  Seq(file)
-}
-
 TaskKey[Seq[File]]("genresource2") <<= (unmanagedResourceDirectories in Compile) map { (dirs) =>
   val file = dirs.head / "bar.txt"
   IO.write(file, "bye")
   Seq(file)
 }
 
-TaskKey[Unit]("checkfoo") <<= (crossTarget) map { (crossTarget) =>
-  val process = sbt.Process("echo", Seq(crossTarget.getName))
+TaskKey[Unit]("gulp-default") <<= (crossTarget) map { (crossTarget) =>
+  val process = sbt.Process("gulp", Seq("default"))
   val out = (process!!)
   println("output: " + out)
   ()
