@@ -1,9 +1,9 @@
 # ci plugin dev server as a test
 > package
-#$ exists target/scala-2.10/classes/package.json
+$ exists target/scala-2.10/classes/package.json
+$ exists target/scala-2.10/classes/gulpfile.js
 > gulp-default
 $ pause
-
 #> start
 # wait for enter
 # stop server

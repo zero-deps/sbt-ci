@@ -11,23 +11,23 @@ object DevBuild extends Build{
     name := "dev-server",
     version := "0.1",
     scalaVersion := "2.10.4",
-    includeFilter in unmanagedResources ~= {_ && "*/.bin/*"}
+    excludeFilter~={_ -- ".bin" }
   ).settings(
-      TaskKey[Unit]("check-assets") := {
-        val s = streams.value
-        s.log.info("AAAAAAAAAAAAAAA")
-        assert(Seq(1,2) contains 1, "1 in " + Seq(1,2))
-        ()
-      },
-      TaskKey[Seq[File]]("genresource") <<= (unmanagedResourceDirectories in Compile) map { (dirs) =>
-        val file = dirs.head / "foo.txt"
-        IO.write(file, "bye")
-        Seq(file)
-      },
       TaskKey[Unit]("gulp-default") <<= (crossTarget, target, classDirectory in Compile) map { (crossTarget, target, classes) =>
-        val process = s"${(classes / "node_modules" / ".bin" / "gulp").toString} -v" !!
+        println(s"$classes")
+        val x = "npm install --prefix target/scala-2.10/classes" #|| "ls" !!
 
-        println("output: " + process)
+        println(x)
+        //Seq("cd", classes.toString)!!
+
+
+        //val pr = s"(cd ${classes.toString} &&  npm install)" !!
+
+        //println("npm"  + pr)
+
+//        val process = s"${(classes / "node_modules" / "gulp" / "bin" / "gulp.js").toString}" !!
+
+//        println("output: " + process)
       }
   ).enablePlugins(CiPlugin)
 }
