@@ -30,9 +30,9 @@ object CiBuild extends Build{
     mappings in (Compile,packageBin) ~= { _.filter(includeInPackage) },
 
     libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-actor" % "2.3.8",
-      "com.typesafe.akka" %% "akka-http-core-experimental" % "1.0-M1",
-      "com.typesafe.akka" %% "akka-stream-experimental" % "1.0-M1",
+      "com.typesafe.akka" %% "akka-actor" % "2.3.9",
+      "com.typesafe.akka" %% "akka-http-core-experimental" % "1.0-M2",
+      "com.typesafe.akka" %% "akka-stream-experimental" % "1.0-M2",
       // "com.fasterxml.jackson.core" % "jackson-databind" % "2.4.3",
       "io.spray" %% "spray-json" % "1.3.1",
       "org.scalaz" %% "scalaz-core" % "7.1.0"),
@@ -40,7 +40,8 @@ object CiBuild extends Build{
       "Akka"  at "http://repo.akka.io/releases/",
       "spray" at "http://http://repo.spray.io",
       Classpaths.typesafeReleases,
-      Classpaths.typesafeSnapshots))
+      Classpaths.typesafeSnapshots),
+    shellPrompt := { s => Project.extract(s).currentProject.id + " > " })
   .settings(scriptedSettings ++ Seq(
     scriptedBufferLog := false,
     scriptedLaunchOpts <+= version apply { v => "-Dproject.version=" + v }
