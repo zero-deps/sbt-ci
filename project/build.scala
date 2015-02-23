@@ -1,11 +1,10 @@
-package playtech.sbt
+package ci.sbt
 
-import sbt._
 import sbt.Keys._
+import sbt._
 
 object CiBuild extends Build{
-  import ScriptedPlugin._
-  import Path.flat
+  import sbt.ScriptedPlugin._
 
 
   lazy val root = Project(
@@ -31,11 +30,12 @@ object CiBuild extends Build{
 
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-actor" % "2.3.9",
-      "com.typesafe.akka" %% "akka-http-core-experimental" % "1.0-M2",
-      "com.typesafe.akka" %% "akka-stream-experimental" % "1.0-M2",
+      "com.typesafe.akka" %% "akka-stream-experimental" % "1.0-M3",
+      "com.typesafe.akka" %% "akka-http-core-experimental" % "1.0-M3",
+      "com.typesafe.akka" %% "akka-http-experimental" % "1.0-M3",
       // "com.fasterxml.jackson.core" % "jackson-databind" % "2.4.3",
-      "io.spray" %% "spray-json" % "1.3.1",
-      "org.scalaz" %% "scalaz-core" % "7.1.0"),
+      "io.spray" %% "spray-json" % "1.3.1"
+      /*"org.scalaz" %% "scalaz-core" % "7.1.0"*/),
     resolvers ++= Seq(
       "Akka"  at "http://repo.akka.io/releases/",
       "spray" at "http://http://repo.spray.io",
@@ -47,13 +47,13 @@ object CiBuild extends Build{
     scriptedLaunchOpts <+= version apply { v => "-Dproject.version=" + v }
   ): _*)
 
-  import util.matching.Regex
+  import scala.util.matching.Regex
   implicit class RegexContext(sc: StringContext) {
     def r = new Regex(sc.parts.mkString, sc.parts.tail.map(_ => "x"): _*)
   }
 
   private def includeInPackage(se:(File,String)):Boolean = se._2 match {
-    case r"""(?:node_modules/.bin/.*)""" => true
+    case r"""(?:node_modules/.bin/.*)""" => false
     case r"""(?:node_modules/.*)""" => false
     case _ => true
   }

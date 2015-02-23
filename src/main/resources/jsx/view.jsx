@@ -5,7 +5,7 @@ var View = React.createClass({
   render: function(){
     return (
       <div>
-        Example View 3
+        Example View 8
       </div>
     );
   }

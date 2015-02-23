@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+  <title>ci sever plugin</title>
+  <link rel="stylesheet" href="css/reveal.min.css" id="theme">
+</head>
+
+<body>
+  <div class="reveal">
+    <div class="slides">
+      <section data-markdown data-separator="^\n---\n$" data-vertical="^\n--\n$">
+        <script type="text/template">
+          ## ci server
+
+          -----
+
+          Build with Scala and Akka toolkit.
+
+          ---
+
+          ## http interface
+
+          ----
+
+          Build with Scala and Akka toolkit.
+        </script>
+      </section>
+    </div>
+  </div>
+  <script src="js/reveal.min.js"></script>
+  <script src="js/head.min.js"></script>
+  <script>
+    Reveal.initialize({
+      history: true,
+      transition: 'linear',
+      fragments: true,
+
+      dependencies: [
+        { src: 'js/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+        { src: 'js/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+        { src: 'js/svg-fragment.js', async: true, callback: function() {  return !!document.querySelector( '[data-svg-fragment]' ); } }
+      ]
+    });
+  </script>
+</body>
+</html>

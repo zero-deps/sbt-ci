@@ -53,12 +53,9 @@ gulp.task('js', ['clean-js', 'cp-js'], function(){return scr(false);});
 gulp.task('clean-css',function(css){del(conf.css, css);});
 gulp.task('less',['clean-css'],function(){
   return gulp.src(conf.less)
-//    .pipe(sourcemaps.init())
     .pipe(less({
-//      plugins: [cleancss],
       paths: [path.join(__dirname, 'less', 'includes')]
     }))
-//    .pipe(sourcemaps.write(conf.maps))
     .pipe(gulp.dest(conf.css[0]));
 });
 gulp.task('css', function(){

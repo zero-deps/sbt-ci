@@ -13,7 +13,7 @@ var View = require('./view.jsx');
 
 var data2 = [
   {name: "task1", text: "This is one"},
-  {name: "task2", text: "This is *another*"}
+  {name: "task2", text: "This is another"}
 ];
 
 var SbtTask = React.createClass({
@@ -35,12 +35,12 @@ var SbtTasks = React.createClass({
 });
 
 
-React.render(
+/*React.render(
   <SbtTasks data={data2}/>,
   document.getElementById('bdy'));
-
+*/
 /*Reveal.initialize({history: true,center: true,embedded: true,
   dependencies: [
     {src: 'assets/js/marked.js', condition: function() { return !!document.querySelector('[data-markdown]');}},
     {src: 'assets/js/markdown.js', condition: function() { return !!document.querySelector('[data-markdown]');}} ]});*/
-//React.render(<View/>, document.body);
+React.render(<View/>, document.getElementById('bdy'));

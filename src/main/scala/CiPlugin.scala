@@ -9,8 +9,8 @@ import akka.actor.ActorSystem
 import akka.http.Http
 import akka.http.model.MediaTypes._
 import akka.http.model.StatusCodes.{NoContent, NotImplemented}
+import akka.stream.ActorFlowMaterializer
 //import akka.http.server.Route
-import akka.stream.FlowMaterializer
 import akka.stream.scaladsl.Flow
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
@@ -28,8 +28,10 @@ object CiPlugin extends AutoPlugin  with FileRoute
   var as:Option[ActorSystem] = None
 
   object autoImport{
+    lazy val cp     = taskKey[Seq[(File,File)]]("copy resources")
     lazy val start  = taskKey[Unit]("start CI server")
     lazy val stop   = taskKey[Unit]("stop CI server")
+    lazy val devStart=taskKey[Unit]("start CI server in dev mode")
     lazy val pull   = taskKey[Unit]("git pull")
     lazy val status = taskKey[Unit]("git status")
     lazy val re     = taskKey[Analysis]("rebuild")
@@ -41,20 +43,25 @@ object CiPlugin extends AutoPlugin  with FileRoute
   override def trigger = noTrigger
   override lazy val projectSettings = Seq(
     tst <<= test,
-    copyResources in Compile <++= copyAssetsTask,
+    copyResources <<= copyAssetsTask,
     start <<= startCi.dependsOn(packageBin in Compile),
     stop  <<= stopCi,
     onUnload in Global ~= (unloadSystem compose _),
     re<<=runTask(compile in Compile))
 
-  def copyAssetsTask() = (streams, target) map { (s,root)=>
+  def copyAssetsTask() = (streams, classDirectory in Compile) map { (s,root)=>
     s.log.info("prepare CI server assets...")
     val cl = getClass.getClassLoader
     val url = cl.getResource("assets")
     val jar = url.openConnection.asInstanceOf[JarURLConnection].getJarFile
+    s.log.info(s"jar loaded ${jar.getName}")
+    if (!root.exists) sbt.IO.createDirectory(root)
+
     import scala.collection.JavaConversions._
     val assets:List[JarEntry] = jar.entries.filter(_.getName.startsWith("assets")).toList
-    assets.filter(_.isDirectory).map(e=> new File(root + File.separator + e.getName).mkdir)
+    assets.filter(_.isDirectory).map(e=> {
+      s.log.info(s"mkdir ${e.getName}")
+      new File(root + File.separator + e.getName).mkdir})
     assets.filterNot(_.isDirectory).map(e => {
       val name = root + File.separator + e.getName
       val is = jar.getInputStream(e)
@@ -158,12 +165,12 @@ object CiPlugin extends AutoPlugin  with FileRoute
 
     implicit val system = ActorSystem("ci", ConfigFactory.load(cl), cl)
     implicit val askTimeout: Timeout = 500.millis
-    implicit val materializer = FlowMaterializer()
+    implicit val materializer = ActorFlowMaterializer()
 
     import akka.http.model.HttpMethods._
     import akka.http.model._
 
-    val binding = Http().bind(interface = "0.0.0.0", port = port)
+    val binding = Http(system).bind(interface = "0.0.0.0", port = port)
 
     val routeFlow:Flow[HttpRequest,HttpResponse] = Flow[HttpRequest].map {
       case HttpRequest(POST, u, _, obj, _) =>
@@ -181,7 +188,7 @@ object CiPlugin extends AutoPlugin  with FileRoute
         HttpResponse(entity = HttpEntity.Chunked(`text/plain`,
           bin(finder.get.headOption.getOrElse(target.value / ".history"))))
 
-      case HttpRequest(GET,_,_,r,_) => index
+      case HttpRequest(GET,_,_,r,_) =>   index
       case _: HttpRequest => HttpResponse(NotImplemented)
     }
 

@@ -13,21 +13,23 @@ object DevBuild extends Build{
     scalaVersion := "2.10.4",
     excludeFilter~={_ -- ".bin" }
   ).settings(
-      TaskKey[Unit]("gulp-default") <<= (crossTarget, target, classDirectory in Compile) map { (crossTarget, target, classes) =>
-        println(s"$classes")
-        val x = "npm install --prefix target/scala-2.10/classes" #|| "ls" !!
-
-        println(x)
-        //Seq("cd", classes.toString)!!
-
-
-        //val pr = s"(cd ${classes.toString} &&  npm install)" !!
-
-        //println("npm"  + pr)
-
-//        val process = s"${(classes / "node_modules" / "gulp" / "bin" / "gulp.js").toString}" !!
-
-//        println("output: " + process)
+      TaskKey[Unit]("npm-install") <<= (streams, classDirectory in Compile) map { (s, base) =>
+        s.log("-> npm install")
+        s"npm install --no-optional --prefix $base" !! s.log
+      },
+      TaskKey[Unit]("chmod-x-gulp") <<= (streams, classDirectory in Compile) map { (s, base) =>
+        s"chmod a+x ${base / "node_modules" / ".bin" / "gulp"}" !! s.log
+      },
+      TaskKey[Unit]("gulp-watch") <<= (streams, classDirectory in Compile) map { (s, base) =>
+        s.log.info(s"gulp watch in $base")
+        val gulp = base / "node_modules" / "gulp" / "bin" / "gulp.js"
+        
+        
+        
+        val watch = (s"sudo $gulp watch" !!)
+        
+        s.log.info("[fuck]" + watch.trim)
+        ()
       }
   ).enablePlugins(CiPlugin)
 }

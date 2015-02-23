@@ -41,7 +41,7 @@ trait LandingPage { this:AutoPlugin =>
       |     </div>
       |   </div>
       | </div>
-      | <footer class="section">mws(c)2014</footer>
+      | <footer class="section">mws(c)2015</footer>
       | <script type="text/javascript" src="assets/js/ci.js"></script>
       |</body>
       |</html>""".stripMargin('|')))

@@ -2,9 +2,14 @@
 > package
 $ exists target/scala-2.10/classes/package.json
 $ exists target/scala-2.10/classes/gulpfile.js
-> gulp-default
+> npm-install
+$ exists target/scala-2.10/classes/node_modules/.bin/gulp
+#$ exec chmod a+x target/scala-2.10/classes/node_modules/.bin/gulp
 $ pause
-#> start
+> gulp-watch
+$ pause
+> start
+$ pause
 # wait for enter
 # stop server
-#> stop
+> stop
